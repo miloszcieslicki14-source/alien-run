@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alien Run 👽</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#080b20}
+body{display:flex;align-items:center;justify-content:center}
+#box{width:min(950px,96vw);text-align:center;color:white}
+h1{color:#73f7ff;text-shadow:0 0 18px #00d9ff;margin:0 0 8px}
+p{margin:0 0 10px;color:#cbd3ff}
+canvas{display:block;width:100%;height:auto;border:3px solid #5368ff;border-radius:18px;box-shadow:0 0 30px #3046c9;cursor:pointer}
+button{margin-top:12px;padding:13px 25px;border:0;border-radius:12px;background:#7b5cff;color:white;font-size:18px;font-weight:bold;cursor:pointer;box-shadow:0 0 18px #6d4dff}
+button:hover{background:#967dff;transform:scale(1.03)}
+</style>
+</head>
+<body>
+<div id="box">
+<h1>👽 ALIEN RUN</h1>
+<p>SPACJA / ↑ / kliknięcie = SKOK</p>
+<canvas id="game" width="950" height="380"></canvas>
+<button id="startBtn">🚀 ZACZYNAJMY!</button>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const startBtn=document.getElementById("startBtn");
+
+let state="start";
+let score=0, speed=6, spawnTimer=0, starTimer=0, last=0;
+let alien={x:110,y:285,w:44,h:44,vy:0};
+let meteors=[], stars=[];
+
+function resetGame(){
+  score=0; speed=6; spawnTimer=50; starTimer=30;
+  alien={x:110,y:285,w:44,h:44,vy:0};
+  meteors=[]; stars=[];
+}
+
+function startGame(){
+  resetGame();
+  state="playing";
+  startBtn.textContent="🔄 RESTART";
+}
+
+startBtn.addEventListener("click",()=>{
+  startGame();
+  canvas.focus();
+});
+
+function jump(){
+  if(state==="start" || state==="gameover"){startGame(); return;}
+  if(alien.y>=285) alien.vy=-14;
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space" || e.code==="ArrowUp"){
+    e.preventDefault();
+    jump();
+  }
+});
+
+canvas.addEventListener("pointerdown",jump);
+
+function hit(a,b){
+  return a.x+7<b.x+b.w && a.x+a.w-7>b.x &&
+         a.y+5<b.y+b.h && a.y+a.h>b.y;
+}
+
+function drawAlien(){
+  ctx.save();
+  ctx.translate(alien.x,alien.y);
+  ctx.fillStyle="#74ff83";
+  ctx.beginPath();ctx.ellipse(22,24,17,19,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#9cffaa";
+  ctx.beginPath();ctx.ellipse(22,14,20,16,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#11152e";
+  ctx.beginPath();ctx.ellipse(15,14,4,7,0,0,Math.PI*2);ctx.ellipse(29,14,4,7,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#74ff83";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(22,0);ctx.lineTo(22,-7);ctx.stroke();
+  ctx.fillStyle="#ff6cf5";ctx.beginPath();ctx.arc(22,-9,3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#74ff83";ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(12,40);ctx.lineTo(8,46);ctx.moveTo(32,40);ctx.lineTo(36,46);ctx.stroke();
+  ctx.restore();
+}
+
+function drawMeteor(m){
+  ctx.save();ctx.translate(m.x,m.y);
+  ctx.fillStyle="#ff685d";
+  ctx.beginPath();ctx.arc(20,20,20,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#ffad68";
+  ctx.beginPath();ctx.arc(13,12,5,0,Math.PI*2);ctx.arc(28,24,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#ffcc67";
+  ctx.beginPath();ctx.moveTo(2,23);ctx.lineTo(-32,35);ctx.lineTo(1,30);ctx.fill();
+  ctx.restore();
+}
+
+function drawStar(s){
+  ctx.save();ctx.translate(s.x,s.y);
+  ctx.fillStyle="#ffe86b";ctx.shadowColor="#ffe86b";ctx.shadowBlur=16;
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    let a=-Math.PI/2+i*Math.PI/5, r=i%2?7:14;
+    ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  ctx.closePath();ctx.fill();ctx.restore();
+}
+
+function drawBackground(t){
+  let p=(Math.sin(t/450)+1)/2;
+  let g=ctx.createLinearGradient(0,0,0,380);
+  g.addColorStop(0,`rgb(${7+Math.floor(p*20)},${8+Math.floor(p*15)},${35+Math.floor(p*35)})`);
+  g.addColorStop(1,`rgb(${15+Math.floor(p*25)},${18+Math.floor(p*15)},${55+Math.floor(p*35)})`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,950,380);
+
+  ctx.fillStyle="white";
+  for(let i=0;i<65;i++){
+    let sx=(i*173)%950, sy=(i*71)%270;
+    ctx.globalAlpha=.35+(i%3)*.2;
+    ctx.fillRect(sx,sy,2,2);
+  }
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle="#e3e6ff";ctx.beginPath();ctx.arc(790,70,42,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#151a3c";ctx.beginPath();ctx.arc(808,57,39,0,Math.PI*2);ctx.fill();
+
+  ctx.fillStyle="#262c5d";ctx.fillRect(0,333,950,47);
+  ctx.fillStyle="#55e9b5";ctx.fillRect(0,333,950,4);
+}
+
+function drawStart(){
+  ctx.fillStyle="rgba(5,7,20,.48)";ctx.fillRect(0,0,950,380);
+  ctx.textAlign="center";
+  ctx.fillStyle="#72f8ff";ctx.font="bold 52px Arial";
+  ctx.fillText("👽 ALIEN RUN",475,145);
+  ctx.fillStyle="white";ctx.font="22px Arial";
+  ctx.fillText("Uciekaj przed meteorami!",475,188);
+  ctx.fillStyle="#ff70df";ctx.font="bold 24px Arial";
+  ctx.fillText("Kliknij ZACZYNAJMY!",475,235);
+  ctx.textAlign="left";
+}
+
+function drawGameOver(){
+  ctx.fillStyle="rgba(4,6,18,.72)";ctx.fillRect(0,0,950,380);
+  ctx.textAlign="center";
+  ctx.fillStyle="#ff70df";ctx.font="bold 52px Arial";
+  ctx.fillText("KONIEC GRY!",475,150);
+  ctx.fillStyle="white";ctx.font="24px Arial";
+  ctx.fillText("Wynik: "+Math.floor(score),475,195);
+  ctx.fillStyle="#aeb9ff";ctx.font="18px Arial";
+  ctx.fillText("Kliknij RESTART albo naciśnij SPACJĘ",475,235);
+  ctx.textAlign="left";
+}
+
+function loop(t){
+  let dt=last?Math.min((t-last)/16.67,2):1;
+  last=t;
+  drawBackground(t);
+
+  if(state==="playing"){
+    alien.vy+=0.75*dt;
+    alien.y+=alien.vy*dt;
+    if(alien.y>=285){alien.y=285;alien.vy=0;}
+
+    score+=0.08*dt;
+    speed+=0.0018*dt;
+
+    spawnTimer-=dt;
+    if(spawnTimer<=0){
+      meteors.push({x:970,y:305,w:42,h:28});
+      spawnTimer=48+Math.random()*45;
+    }
+
+    starTimer-=dt;
+    if(starTimer<=0){
+      stars.push({x:970,y:150+Math.random()*115});
+      starTimer=55+Math.random()*80;
+    }
+
+    meteors.forEach(m=>m.x-=speed*dt);
+    stars.forEach(s=>s.x-=speed*dt);
+
+    meteors=meteors.filter(m=>m.x>-80);
+    stars=stars.filter(s=>s.x>-30);
+
+    for(const m of meteors){
+      if(hit(alien,m)){state="gameover";break;}
+    }
+
+    stars=stars.filter(s=>{
+      let box={x:s.x-12,y:s.y-12,w:24,h:24};
+      if(hit(alien,box)){score+=10;return false;}
+      return true;
+    });
+  }
+
+  stars.forEach(drawStar);
+  meteors.forEach(drawMeteor);
+  drawAlien();
+
+  ctx.fillStyle="white";ctx.font="bold 22px Arial";
+  ctx.fillText("Wynik: "+Math.floor(score),22,35);
+  ctx.fillStyle="#b8c0ff";ctx.font="15px Arial";
+  ctx.fillText("Prędkość: "+speed.toFixed(1),22,57);
+
+  if(state==="start") drawStart();
+  if(state==="gameover") drawGameOver();
+
+  requestAnimationFrame(loop);
+}
+resetGame();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
